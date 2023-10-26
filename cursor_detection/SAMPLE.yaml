@@ -1,0 +1,10 @@
+# Path to data
+path: ../data/<IMAGE_FOLDER_NAME>
+train: train
+val: val
+test: test
+# Number of classes
+nc: <INPUT INTEGER>
+# Class names
+names:
+  0: cursor <ADJUST ACCORDINGLY>
