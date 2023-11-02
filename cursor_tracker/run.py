@@ -1,9 +1,11 @@
 import cv2
 import json
 
-def generate_results(model, video_path:str, max_det_1 = True):
+def generate_results(model, video_path:str, fps, frame_width=1920, frame_height=1280, max_det_1 = True):
     video_name = video_path.split('/')[-1].split('.')[0]
     cap = cv2.VideoCapture(video_path)
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
+    out = cv2.VideoWriter(video_name+'_predictions.mp4', fourcc, fps, (frame_width, frame_height), True)
 
     # Create a list to store detection results
     detections = []
@@ -14,7 +16,7 @@ def generate_results(model, video_path:str, max_det_1 = True):
         if not ret:
             break
 
-        frame = cv2.resize(frame, (1920,1280)) # width and height flipped
+        frame = cv2.resize(frame, (frame_width,frame_height)) # width and height flipped
 
         # Perform object detection using YOLOv8
         results = model(frame)
@@ -73,20 +75,31 @@ def generate_results(model, video_path:str, max_det_1 = True):
                         'coord_x': coordinate[0], 'coord_y': coordinate[1]
                     }
                 detections.append(detection)
+            
+                # Prepare detection data for the frame
+                color = (0, 255, 0)  # Green color for the bounding box
+                label = f"Confidence: {confidences[i]:.2f}"
+                cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
+                cv2.putText(frame, label, (int(x1), int(y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+                out.write(frame)
+
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
 
     # Save detections to a JSON file
     if not max_det_1:
         output_file = f'results/{video_name}_all_detections.json'
     else:
         output_file = f'results/{video_name}_max_detection.json'
-    
     with open(output_file, 'w') as json_file:
         json.dump(detections, json_file, indent=4)
 
     print(f"Detections saved to {output_file}")
 
 # define helper functions for cursor tracking
-def convert_FPS(source_path:str, dest_path:str, desired_fps:int):
+def convert_FPS(source_path:str, dest_path:str, desired_fps:int) -> None:
     '''
     converts video in source_path to desired_fps, and saves as dest_path 
     assumes source video is of mp4 format
