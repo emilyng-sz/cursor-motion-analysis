@@ -97,6 +97,7 @@ def generate_results(model, video_path:str, fps, frame_width=1920, frame_height=
         json.dump(detections, json_file, indent=4)
 
     print(f"Detections saved to {output_file}")
+    return detections
 
 # define helper functions for cursor tracking
 def convert_FPS(source_path:str, dest_path:str, desired_fps:int) -> None:
