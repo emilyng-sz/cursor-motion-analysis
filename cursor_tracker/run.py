@@ -5,7 +5,7 @@ def generate_results(model, video_path:str, fps, frame_width=1920, frame_height=
     video_name = video_path.split('/')[-1].split('.')[0]
     cap = cv2.VideoCapture(video_path)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
-    out = cv2.VideoWriter(video_name+'_predictions.mp4', fourcc, fps, (frame_width, frame_height), True)
+    out = cv2.VideoWriter('results/'+video_name+'_predictions.mp4', fourcc, fps, (frame_width, frame_height), True)
 
     # Create a list to store detection results
     detections = []
@@ -19,7 +19,7 @@ def generate_results(model, video_path:str, fps, frame_width=1920, frame_height=
         frame = cv2.resize(frame, (frame_width,frame_height)) # width and height flipped
 
         # Perform object detection using YOLOv8
-        results = model(frame)
+        results = model(frame, verbose=False)
         timestamp = int(cap.get(cv2.CAP_PROP_POS_MSEC))
 
         if not max_det_1:
@@ -35,7 +35,6 @@ def generate_results(model, video_path:str, fps, frame_width=1920, frame_height=
                         'class_label': class_label,
                         'confidence': confidences[i],
                         'bbox': [int(x1), int(y1), int(x2), int(y2)],
-                        'bbox_tl': int(x1), 'bbox_bl': int(y1), 'bbox_tr': int(x2), 'bbox_br': int(y2),
                         'coordinates': coordinate,
                         'coord_x': coordinate[0], 'coord_y': coordinate[1]
                     }
@@ -46,12 +45,11 @@ def generate_results(model, video_path:str, fps, frame_width=1920, frame_height=
         else:
 
             if len(results[0].boxes.cls) > 1: # multiple detections
-                print(timestamp, 'with', len(results[0].boxes.cls) )
+                print(f"time {timestamp} detects {len(results[0].boxes.cls)} cursors")
 
             confidences = list(map(float, results[0].boxes.conf.cpu().numpy()))
 
             if not confidences: # will have empty values
-                print(timestamp , " has 0 cursors. Skipping...")
                 continue
 
             # finds the best 
@@ -60,29 +58,28 @@ def generate_results(model, video_path:str, fps, frame_width=1920, frame_height=
             x1, y1, x2, y2 = bboxes[0], bboxes[1], bboxes[2], bboxes[3]
             coordinate = ((x1+x2)/2, (y1+y2)/2)
 
-            # loops through ALL detected cursors:
-            for i in range(len(confidences)):
-                bboxes = results[0].boxes.xyxy[i].cpu().numpy()
-                x1, y1, x2, y2 = bboxes[0], bboxes[1], bboxes[2], bboxes[3]
-                coordinate = ((x1+x2)/2, (y1+y2)/2)
-                detection = {
-                        'timestamp': timestamp,
-                        'class_label': results[0].names[int(results[0].boxes.cls.numpy()[i])],
-                        'confidence': confidences[i],
-                        'bbox': [int(x1), int(y1), int(x2), int(y2)],
-                        'bbox_tl': int(x1), 'bbox_bl': int(y1), 'bbox_tr': int(x2), 'bbox_br': int(y2),
-                        'coordinates': coordinate,
-                        'coord_x': coordinate[0], 'coord_y': coordinate[1]
-                    }
-                detections.append(detection)
+            # takes the best
+            bboxes = results[0].boxes.xyxy[best_index].cpu().numpy()
+            x1, y1, x2, y2 = bboxes[0], bboxes[1], bboxes[2], bboxes[3]
+            coordinate = ((x1+x2)/2, (y1+y2)/2)
+            detection = {
+                    'timestamp': timestamp,
+                    'class_label': results[0].names[int(results[0].boxes.cls.numpy()[best_index])],
+                    'confidence': confidences[best_index],
+                    'bbox': [int(x1), int(y1), int(x2), int(y2)],
+                    'bbox_tl': int(x1), 'bbox_bl': int(y1), 'bbox_tr': int(x2), 'bbox_br': int(y2),
+                    'coordinates': coordinate,
+                    'coord_x': coordinate[0], 'coord_y': coordinate[1]
+                }
+            detections.append(detection)
             
-                # Prepare detection data for the frame
-                color = (0, 255, 0)  # Green color for the bounding box
-                label = f"Confidence: {confidences[i]:.2f}"
-                cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
-                cv2.putText(frame, label, (int(x1), int(y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+            # Prepare detection data for the frame
+            color = (0, 255, 0)  # Green color for the bounding box
+            label = f"Confidence: {confidences[best_index]:.2f}"
+            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
+            cv2.putText(frame, label, (int(x1), int(y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-                out.write(frame)
+            out.write(frame)
 
     cap.release()
     out.release()

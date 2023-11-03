@@ -55,7 +55,7 @@ def group_coordinates(all_data, height, width, factor):
         and returns new_all_data, x and y as three separate lists '''
     return list(map(lambda tup: (tup[0], (tup[1][0]//factor, tup[1][1]//factor)), all_data)), height/factor, width/factor
 
-def plot_2D(time_coord_data):
+def plot_2D(time_coord_data, x_lim=None, y_lim=None,):
     ''' Visualise 2D trajectory as plot '''
     import matplotlib.pyplot as plt
     _, x_values, y_values = list(map(lambda x: x[0], time_coord_data)), \
@@ -65,12 +65,14 @@ def plot_2D(time_coord_data):
     # Set axis labels and plot title
     plt.xlabel('X position')
     plt.ylabel('Y position')
+    if x_lim: plt.set_xlim(x_lim)
+    if y_lim: plt.set_ylim(y_lim)
     plt.title('Positions of cursor on screen')
     # Display the plot
     plt.grid(True)
     plt.show()
 
-def plot_3D(time_coord_data):
+def plot_3D(time_coord_data, x_lim=None, time_lim=None, z_lim=None):
 
     ''' plot 3D plot to show position over time'''
     import matplotlib.pyplot as plt
@@ -85,6 +87,9 @@ def plot_3D(time_coord_data):
     ax.set_xlabel("X position")
     ax.set_ylabel("Time (ms)")
     ax.set_zlabel("Y position")
+    if x_lim: ax.set_xlim(x_lim)
+    if time_lim: ax.set_ylim(time_lim)
+    if z_lim: ax.set_zlim(z_lim)
     ax.legend()
 
     plt.show()
@@ -127,3 +132,30 @@ def plot_3D_animation(time_coord_data, height, width, path):
     ani = animation.FuncAnimation(fig, update, N, fargs=(data, line), interval=10000/N, blit=False)
     ani.save(path)
     plt.show()
+
+def overlay_points_on_frame(video_path, start_time, end_time, time_coord_data, pre_processed:bool=True, height=1280, width=1920, colour='white', time_ms = None):
+    '''
+    Overlays the points between start and end time according to time_coord_data
+    if time_coord_raw is taken in, ensure pre_processed is False, so y / height is not inverted for plotting!
+
+    Video frame chosen is the average of start and end time. Can also be specified by time_ms
+    '''
+    import cv2
+    import matplotlib.pyplot as plt
+    
+    if time_ms is None:
+        time_ms = (start_time+end_time)//2 
+
+    cap = cv2.VideoCapture(video_path)
+    cap.set(cv2.CAP_PROP_POS_MSEC, time_ms)
+    _, frame = cap.read()
+    frame = cv2.resize(frame, (width,height))
+    plt.imshow(frame[:,:,::-1])
+    
+    x, y = zip(*list(map(lambda x: x[1], filter(lambda tup: tup[0] >= start_time and tup[0] <= end_time, time_coord_data))))
+    if pre_processed: 
+        plt.scatter(x,list(map(lambda x: height-x , y)), color=colour,marker='o')
+    else:
+        plt.scatter(x,list(map(lambda x: x , y)), color=colour,marker='o')
+
+    plt.title(f"Cursor detected from {start_time}ms to {end_time}ms")
