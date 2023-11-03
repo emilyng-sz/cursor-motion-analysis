@@ -1,5 +1,79 @@
 # define helper functions for motion_analysis purposes
 
+def analyse_motion(time_coord_data, factor, loop_duration=500, stationary_duration=3000, underline_duration=2000):
+    '''
+    takes in time_coord_data and a factor
+    returns all_info with time_coord_data
+    '''
+
+    # loop variables
+    window = []
+    loop = []
+    indx = 0
+
+    # stationary variables
+    stationary = []
+
+    # underline variables
+    underline = []
+
+    previous_coords = None
+
+    for time, coord in time_coord_data:
+        
+        # ----- check for loops ----- #
+        #print("Start of new sliding window / loop")
+        window.append(time_coord_data[indx])
+        for time_inner, coord_inner in time_coord_data[indx+1:]:
+            window.append((time_inner, coord_inner))
+            if window[-1][0] - window[0][0] > loop_duration: # default minimum 0.5s for anything meaningful
+                if is_clockwise_or_counterclockwise(list(map(lambda x: x[1], window))) and \
+                    (round_to_factor(window[-1][1][0], factor) == round_to_factor(window[0][1][0], factor)) and \
+                    (round_to_factor(window[-1][1][1], factor) == round_to_factor(window[0][1][1], factor)):
+                    
+                    if loop and loop[-1][0] <= window[0][0] <= loop[-1][1]:
+                        # compare end window timing with end timing of latest loop
+                        if window[-1][0] > loop[-1][1]: 
+                            loop[-1][1] = window[-1][0]
+                    else:
+                        loop.append([window[0][0], window[-1][0], 'loop'])
+        window.clear()
+        indx += 1
+
+        # ----- check for stationary points ----- #
+        coord_factored =  (round_to_factor(coord[0], factor), round_to_factor(coord[1],factor))
+        if previous_coords is None:
+            current_stationary = [time, time] # start time, end time
+        elif coord_factored == previous_coords:
+            current_stationary[1] = time # modify and set end time
+        else:
+            # default minimum 3s to indicate stationary
+            if current_stationary[1] - current_stationary[0] > stationary_duration:
+                stationary.append(current_stationary+['stationary'])
+            # start new check
+            current_stationary = [time, time] 
+        
+
+        # ----- check for underline (horizontal) points ----- #
+        if previous_coords is None:
+            current_underline = [time, time, coord, coord] # start time, end time, start position(unfactored), end position(unfactored)
+        elif coord_factored[1] == previous_coords[1] and coord_factored[0] != previous_coords[0]: # check same y value AND different x value
+            current_underline[1] = time # modify and set end time
+            current_underline[3] = coord # modify and set end coord
+        else:
+            # default minimum 2s to indicate underline OR consider: min distance for underline
+            if current_underline[1] - current_underline[0] >= underline_duration: 
+                underline.append([current_underline[0], current_underline[1], 'underline'])
+            # start new check
+            current_underline = [time, time, coord, coord]
+        
+        previous_coords = coord_factored
+
+    all_info = loop + stationary + underline
+
+    return get_all_info(all_info, time_coord_data)
+
+
 def round_to_factor(number, factor):
     return ((number + factor // 2) // factor ) * factor
 
@@ -26,7 +100,7 @@ def is_clockwise_or_counterclockwise(polygon):
     return int(0.8*n) <= abs(orientation_sum)
 
 
-# --- functions for analysing analysis results --- #
+# --- functions for collating analysis results --- #
 
 def get_all_info(all_info, time_coord_data):
     all_info_dct = [] # key value pairs of start_time: info

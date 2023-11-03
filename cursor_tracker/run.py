@@ -101,6 +101,7 @@ def convert_FPS(source_path:str, dest_path:str, desired_fps:int) -> None:
     '''
     converts video in source_path to desired_fps, and saves as dest_path 
     assumes source video is of mp4 format
+    does not re-sample the video but lengthens it
     '''
     cap = cv2.VideoCapture(source_path)
 
