@@ -38,7 +38,7 @@ cursor-motion-analysis/
 1. Clone the repo.
 
    ```sh
-   git clone <link>
+   git clone https://github.com/emilyng-sz/cursor-motion-analysis.git
    ```
 2. Download all the required dependencies.
    ```sh
