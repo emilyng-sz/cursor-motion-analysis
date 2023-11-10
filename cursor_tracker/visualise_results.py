@@ -132,30 +132,3 @@ def plot_3D_animation(time_coord_data, height, width, path):
     ani = animation.FuncAnimation(fig, update, N, fargs=(data, line), interval=10000/N, blit=False)
     ani.save(path)
     plt.show()
-
-def overlay_points_on_frame(video_path, start_time, end_time, time_coord_data, pre_processed:bool=True, height=1280, width=1920, colour='white', time_ms = None):
-    '''
-    Overlays the points between start and end time according to time_coord_data
-    if time_coord_raw is taken in, ensure pre_processed is False, so y / height is not inverted for plotting!
-
-    Video frame chosen is the average of start and end time. Can also be specified by time_ms
-    '''
-    import cv2
-    import matplotlib.pyplot as plt
-    
-    if time_ms is None:
-        time_ms = (start_time+end_time)//2 
-
-    cap = cv2.VideoCapture(video_path)
-    cap.set(cv2.CAP_PROP_POS_MSEC, time_ms)
-    _, frame = cap.read()
-    frame = cv2.resize(frame, (width,height))
-    plt.imshow(frame[:,:,::-1])
-    
-    x, y = zip(*list(map(lambda x: x[1], filter(lambda tup: tup[0] >= start_time and tup[0] <= end_time, time_coord_data))))
-    if pre_processed: 
-        plt.scatter(x,list(map(lambda x: height-x , y)), color=colour,marker='o')
-    else:
-        plt.scatter(x,list(map(lambda x: x , y)), color=colour,marker='o')
-
-    plt.title(f"Cursor detected from {start_time}ms to {end_time}ms")

@@ -1,9 +1,10 @@
 import cv2
 import json
 
-def generate_results(model, video_path:str, fps, frame_width=1920, frame_height=1280, max_det_1 = True):
+def generate_results(model, video_path:str, frame_width=1920, frame_height=1280, max_det_1 = True, DEBUG=False):
     video_name = video_path.split('/')[-1].split('.')[0]
     cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
     out = cv2.VideoWriter('results/'+video_name+'_predictions.mp4', fourcc, fps, (frame_width, frame_height), True)
 
@@ -22,6 +23,8 @@ def generate_results(model, video_path:str, fps, frame_width=1920, frame_height=
         results = model(frame, verbose=False)
         timestamp = int(cap.get(cv2.CAP_PROP_POS_MSEC))
 
+        if DEBUG: print(f"time: {timestamp}, {len(results[0].boxes.xyxy)} detections")
+
         if not max_det_1:
             for i in range(len(results[0].boxes.xyxy)):
                 bboxes = results[0].boxes.xyxy[i].cpu().numpy()
@@ -30,22 +33,24 @@ def generate_results(model, video_path:str, fps, frame_width=1920, frame_height=
 
                 # Prepare detection data for the frame
                 x1, y1, x2, y2 = bboxes[0], bboxes[1], bboxes[2], bboxes[3]
+                coordinate = (round((x1+x2)/2, 2), round((y1+y2)/2, 2))
                 detection = {
                         'timestamp': timestamp,
                         'class_label': class_label,
-                        'confidence': confidences[i],
+                        'confidence': round(confidences, 2),
                         'bbox': [int(x1), int(y1), int(x2), int(y2)],
-                        'coordinates': coordinate,
-                        'coord_x': coordinate[0], 'coord_y': coordinate[1]
+                        'coordinates': coordinate
                     }
                 # Append frame detections to the list of detections
                 detections.append(detection)
 
+                if DEBUG: print(f"{coordinate} added to detections for time {timestamp}")
+
         # only take the best detection
         else:
 
-            if len(results[0].boxes.cls) > 1: # multiple detections
-                print(f"time {timestamp} detects {len(results[0].boxes.cls)} cursors")
+            if DEBUG and len(results[0].boxes.cls) > 1: # multiple detections
+                print(f"time: {timestamp}, {len(results[0].boxes.cls)} detections")
 
             confidences = list(map(float, results[0].boxes.conf.cpu().numpy()))
 
@@ -61,24 +66,25 @@ def generate_results(model, video_path:str, fps, frame_width=1920, frame_height=
             # takes the best
             bboxes = results[0].boxes.xyxy[best_index].cpu().numpy()
             x1, y1, x2, y2 = bboxes[0], bboxes[1], bboxes[2], bboxes[3]
-            coordinate = ((x1+x2)/2, (y1+y2)/2)
+            coordinate = (round((x1+x2)/2, 2), round((y1+y2)/2, 2))
             detection = {
                     'timestamp': timestamp,
                     'class_label': results[0].names[int(results[0].boxes.cls.numpy()[best_index])],
                     'confidence': confidences[best_index],
                     'bbox': [int(x1), int(y1), int(x2), int(y2)],
-                    'bbox_tl': int(x1), 'bbox_bl': int(y1), 'bbox_tr': int(x2), 'bbox_br': int(y2),
                     'coordinates': coordinate,
                     'coord_x': coordinate[0], 'coord_y': coordinate[1]
                 }
             detections.append(detection)
+
+            if DEBUG: print(f"{coordinate} added to detections for time {timestamp}")
             
             # Prepare detection data for the frame
             color = (0, 255, 0)  # Green color for the bounding box
             label = f"Confidence: {confidences[best_index]:.2f}"
             cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
             cv2.putText(frame, label, (int(x1), int(y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
+            
             out.write(frame)
 
     cap.release()
@@ -90,6 +96,7 @@ def generate_results(model, video_path:str, fps, frame_width=1920, frame_height=
         output_file = f'results/{video_name}_all_detections.json'
     else:
         output_file = f'results/{video_name}_max_detection.json'
+
     with open(output_file, 'w') as json_file:
         json.dump(detections, json_file, indent=4)
 
