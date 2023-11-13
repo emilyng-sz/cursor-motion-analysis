@@ -189,9 +189,12 @@ def generate_cursor_video(output_vid_name, desired_width = 1920, desired_height 
     print(f"Cursor positions saved to {log_path}")
 
 if __name__ == '__main__':
+    # Run file from root of repository
+    print("--- begin overlaying cursor images --- ")
     # overlay cursor images
-    generate_data("../data", "slide_img_for_TESTING", "cursors")
+    generate_data("data", "slide_img_for_TESTING", "cursors")
     # split train test split
+    print("--- begin train test split --- ")
     train, validation, test = 0.6, 0.2, 0.2
-    train_test_val_split("../data", "slide_img_for_TESTING_nc1", train, validation, test)
+    train_test_val_split("data", "slide_img_for_TESTING_nc1", train, validation, test)
 
