@@ -5,6 +5,8 @@ import os
 import random
 import shutil
 import glob
+import pyautogui
+import cv2
 
 def generate_data(data_path:str, img_folder:str, cursor_folder:str, 
                   save_with_category = True,
@@ -115,9 +117,81 @@ def train_test_val_split(data_path:str, img_folder:str, train, validation, test)
         shutil.copy(glob.glob(generated_img_folder+'/all/'+raw_name+'*.jpg')[0], os.path.join(generated_img_folder, dest_folder, file_name.split('.')[0]+".png"))
         shutil.copy(glob.glob(generated_img_folder+'/all/'+raw_name+'*.txt')[0], os.path.join(generated_img_folder, dest_folder, file_name.split('.')[0]+".txt"))
 
-# overlay cursor images
-generate_data("../data", "slide_img_for_TESTING", "cursors")
-# split train test split
-train, validation, test = 0.6, 0.2, 0.2
-train_test_val_split("../data", "slide_img_for_TESTING_nc1", train, validation, test)
+def generate_cursor_video(output_vid_name, desired_width = 1920, desired_height = 1280, fps=10, duration_sec = 5, cursor_file_name = 'pointer8.png'):
+    '''
+    Screen records the cursor movement for input duration
+    Pastes a specified cursor image of height 25 on the screen (with transparency) 
+    Outputs video and log file of cursor coordinates in data/videos
+
+    Transparency overlay code referecned from: https://gist.github.com/clungzta/b57163b165d3247af2ebfe2868f7dccf
+    LIMITTAION: please do not hover cursor too near the right and bottom edges of the screen as cursor will be out of bounds
+    '''
+
+    video_path = os.path.join('data', 'videos', output_vid_name + '.mp4')
+    log_path = os.path.join('data', 'videos', output_vid_name + '.txt')
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    scree_width, screen_height = pyautogui.size()
+    out = cv2.VideoWriter(video_path, fourcc, fps, (desired_width, desired_height))
+    log_file = open(log_path, "w")
+    increment = 1000/fps
+    count = 0
+    while True:
+        # Capture screen content
+        frame = pyautogui.screenshot()
+        x, y = pyautogui.position() # top left corner of cursor
+
+        x,y = int(x*(desired_width/scree_width)), int(y*(desired_height/screen_height))
+        log_file.write(f"{round(count*increment)},{x},{y}\n")
+        count += 1
+
+        frame = np.array(frame)
+        # Convert BGR format (used by OpenCV) to RGB format
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = cv2.resize(frame, (desired_width, desired_height))
+
+        ### Load cursor image to be pasted
+        cursor = Image.open(f'data/cursors/{cursor_file_name}')
+        # Resize cursor image
+        cursor_w, cursor_h = cursor.size  
+        scaling_f = (25 / cursor_h) # 25 is the desired height of the cursor
+        resize_w, resize_h = int(scaling_f * cursor_w), int(scaling_f * cursor_h)
+        cursor = cursor.resize(size=(resize_w, resize_h))
+        cursor = np.array(cursor)
+
+        # seprate alpha value of cursor png to retain transparency
+        b,g,r,a = cv2.split(cursor)
+        overlay_color = cv2.merge((b,g,r))
+        h, w, _ = overlay_color.shape
+        mask = cv2.medianBlur(a,5)
+        roi = frame[y:y+h, x:x+w]
+        # frame[y:min(y + cursor_h,desired_height), x:min(x + cursor_w,desired_width)] = cursor[0:min(cursor_h,desired_height-y), 0:min(cursor_w,desired_width-x)]
+        # x, y = int(x-(float(w)/2.0)), int((y-float(h)/2.0))
+        
+        # Black-out the area behind the logo in our original ROI
+        img1_bg = cv2.bitwise_and(roi,roi,mask = cv2.bitwise_not(mask))
+        
+        # Mask out the logo from the logo image.
+        img2_fg = cv2.bitwise_and(overlay_color,overlay_color,mask = mask)
+
+        # Update the original image with our new ROI
+        frame[y:y+h, x:x+w] = cv2.add(img1_bg, img2_fg)
+
+        out.write(frame)
+        
+        if count*increment > duration_sec*1000: 
+            break
+    
+    out.release()
+    cv2.destroyAllWindows()
+    log_file.close()
+
+    print(f"Video saved to {video_path}")
+    print(f"Cursor positions saved to {log_path}")
+
+if __name__ == '__main__':
+    # overlay cursor images
+    generate_data("../data", "slide_img_for_TESTING", "cursors")
+    # split train test split
+    train, validation, test = 0.6, 0.2, 0.2
+    train_test_val_split("../data", "slide_img_for_TESTING_nc1", train, validation, test)
 

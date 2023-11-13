@@ -55,6 +55,16 @@ def group_coordinates(all_data, height, width, factor):
         and returns new_all_data, x and y as three separate lists '''
     return list(map(lambda tup: (tup[0], (tup[1][0]//factor, tup[1][1]//factor)), all_data)), height/factor, width/factor
 
+def get_one_frame(video_path:str, time_ms:int, width = 1920, height = 1280):
+    '''Show one frame of the video at time_ms'''
+    import cv2
+    import matplotlib.pyplot as plt
+    cap = cv2.VideoCapture(video_path)
+    cap.set(cv2.CAP_PROP_POS_MSEC, time_ms)
+    _, frame = cap.read()
+    frame = cv2.resize(frame, (width,height))
+    plt.imshow(frame[:,:,::-1])
+
 def plot_2D(time_coord_data, x_lim=None, y_lim=None,):
     ''' Visualise 2D trajectory as plot '''
     import matplotlib.pyplot as plt

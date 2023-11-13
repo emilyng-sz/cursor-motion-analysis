@@ -15,13 +15,19 @@ Motion Insights: Analysis and categorisation of cursor trajectories and interact
 An exploratory Jupyter Notebook `demo.ipynb` is included for visualisation and explorations
 
 ## Repository Structure:
+- `cursor_detection`: contains dataset generation and YOLOv8 model training scripts
+- `cursor-tracker`: contains functions to run, track and visualise cursor
+- `motion_analysis`: contains scripts for performing semantic analysis on cursor movements
+- `model_demo.ipynb`: contains scripts to generate cursor recordings as ground truth and test model accuracy
+- `motion_analysis_demo.ipynb`: contains a notebook to use and visualise results of trained model and motion analysis
 
 ```
 cursor-motion-analysis/
 ├── cursor_detection/
 ├── cursor_tracker/
 ├── motion_analysis/
-├── demo.ipynb
+├── model_demo.ipynb
+├── motion_analysis_demo.ipynb
 ├── .gitignore
 ├── README.md
 ├── requirements.txt
@@ -51,9 +57,12 @@ cursor-motion-analysis/
    ```sh
    pip install -r requirements.txt
    ```
-3. Ensure directory is the same as above, and upload images/recordings to the respective data folders (`images_raw`, `cursors`, `videos`)
-4. Generate your own data by running `cursor_detection/dataset_generation.py`, then `cursor_detection/train.py`
-6. Track a cursor on a video by running `cursor_tracker/run.py`
+3. Ensure directory is the same as above, and add any folder of slide images to `images_raw` and populate `cursors` with desired cursor images to detect.
+4. Generate your own data given any slideshow and cursor images by running `cursor_detection/dataset_generation.py`, then `cursor_detection/train.py`
+5. Given a video recording, save it into local `data/videos` folder, then run `cursor_tracker/run.py`
 - results will be saved into `results` folder
-7. To perform motion_analysis, retrieve stored json data from `results`
-8. Follow instructions in `demo.ipynb` to retrieve all_info as your final result of semantic information
+6. To perform motion_analysis, retrieve stored json data from `results`
+7. Follow steps in `motion_analysis_demo.ipynb` to retrieve all_info as your final result.
+
+- Feel free to explore the various helper functions available!
+- To use pre-trained weights, access them through the google drive link [here](https://drive.google.com/file/d/1slDiZoA8iIYpuUpWtbFqfv3R5VF14Zn-/view?usp=sharing)
