@@ -11,6 +11,7 @@ Cursor Tracker: Applies model and detects cursors on each frame of a recording.
 - `cursor_tracker` contains functions to run, track and visualise the cursor.
 Motion Insights: Analysis and categorisation of cursor trajectories and interactions.
 - `motion_analysis` contains scripts for semantic analysis and categorisation of cursor moving in a loop, underline or stationary.
+- `pretrained_model_metrics` contains evaluation metrics for pretrained model
 
 An exploratory Jupyter Notebook `demo.ipynb` is included for visualisation and explorations
 
@@ -26,6 +27,7 @@ cursor-motion-analysis/
 ├── cursor_detection/
 ├── cursor_tracker/
 ├── motion_analysis/
+├── pretrained_model_metrics/
 ├── model_demo.ipynb
 ├── motion_analysis_demo.ipynb
 ├── .gitignore
