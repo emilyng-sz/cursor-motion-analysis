@@ -2,8 +2,14 @@
 
 def analyse_motion(time_coord_data, factor, loop_duration=500, stationary_duration=3000, underline_duration=2000):
     '''
-    takes in time_coord_data and a factor
-    returns all_info with time_coord_data
+    Parameters: 
+    time_coord_data: list of tuples of (time, (x, y)) coordinates
+    factor: factor to round the coordinates to
+    loop_duration: minimum duration for a loop to be considered (default 0.5s)
+    stationary_duration: minimum duration for a stationary point to be considered (default 3s)
+    underline_duration: minimum duration for an underline to be considered (default 2s)
+
+    Returns: all_info with time_coord_data (list of dictionaries with information about loops, stationary points, and underlines)
     '''
 
     # loop variables
@@ -29,14 +35,14 @@ def analyse_motion(time_coord_data, factor, loop_duration=500, stationary_durati
             if window[-1][0] - window[0][0] > loop_duration: # default minimum 0.5s for anything meaningful
                 if is_clockwise_or_counterclockwise(list(map(lambda x: x[1], window))) and \
                     (round_to_factor(window[-1][1][0], factor) == round_to_factor(window[0][1][0], factor)) and \
-                    (round_to_factor(window[-1][1][1], factor) == round_to_factor(window[0][1][1], factor)):
+                    (round_to_factor(window[-1][1][1], factor) == round_to_factor(window[0][1][1], factor)):  # checks if loop is closed
                     
                     if loop and loop[-1][0] <= window[0][0] <= loop[-1][1]:
                         # compare end window timing with end timing of latest loop
                         if window[-1][0] > loop[-1][1]: 
                             loop[-1][1] = window[-1][0]
                     else:
-                        loop.append([window[0][0], window[-1][0], 'loop'])
+                        loop.append([window[0][0], window[-1][0], 'loop']) # adds the start and end time of the loop
         window.clear()
         indx += 1
 
@@ -75,11 +81,20 @@ def analyse_motion(time_coord_data, factor, loop_duration=500, stationary_durati
 
 
 def round_to_factor(number, factor):
+    '''
+    Given a number and a factor, round the number to the nearest multiple of the factor
+    To discretise the coordinates to a specific factor for reasonable comparison
+    '''
     return ((number + factor // 2) // factor ) * factor
 
 def orientation(p, q, r):
     '''
-    Given three points p, q, and r, calculate the orientation of the vectors (p,q) and (q,r)
+    Given three points p, q, and r in the specific order, 
+    calculate the cross product of the vectors (p,q) and (q,r) 
+    to determine the orientation of the points.
+
+    Parameters: p, q, r are tuples of (x, y) coordinates
+    Returns: 0 if collinear, 1 if clockwise, -1 if counterclockwise
     '''
     val = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1])
     if val == 0:
@@ -87,7 +102,12 @@ def orientation(p, q, r):
     return 1 if val > 0 else -1  # Clockwise or Counterclockwise
 
 def is_clockwise_or_counterclockwise(polygon):
-    ''' Given a list of points, check if the points form either a clockwise or counterclockwise loop.
+    ''' 
+    Given a list of points, check if the points form either a clockwise or counterclockwise loop.
+
+    Parameters: polygon is a list of tuples of (x, y) coordinates
+    Returns: True if the points form a clockwise or counterclockwise loop, False otherwise
+    Note that the points only need to be 80% in the same direction to be considered a loop
     '''
     n = len(polygon)
     if n < 5:
@@ -111,6 +131,16 @@ def get_all_info(all_info, time_coord_data):
 def get_info(start_time, end_time, type, time_coord_data):
     '''
     takes in a start and end time and returns a dictionary with information stored, depending on type
+
+    Parameters:
+    start_time: start time of the motion type 
+    end_time: end time of the motion type
+    type: type of motion ("loop", "stationary", "underline")
+    time_coord_data: list of tuples of (time, (x, y)) coordinates for the entire duration
+
+    Note that start_time and end_time must be within the range of times in time_coord_data 
+
+    Returns: dictionary with information about all motion types during the video
     '''
     info = {}
     info['start_time'] = start_time
